@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-int new_android_audiotrack(char *in_name,int track_type);
+int new_android_audiotrack(char *in_name,int flag, int stream);
 int release_android_audiotrack(void);
 
 

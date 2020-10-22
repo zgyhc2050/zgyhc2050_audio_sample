@@ -141,7 +141,7 @@ static int AudioTrackRelease(void) {
 
     return 0;
 }
-static int AudioTrackInit(int type,char *url) {
+static int AudioTrackInit(int type,char *url, audio_stream_type_t stream) {
     status_t Status;
     int flags  = AUDIO_OUTPUT_FLAG_NONE;
     ALOGD("%s, entering...\n", __FUNCTION__);
@@ -159,7 +159,7 @@ static int AudioTrackInit(int type,char *url) {
 
     ALOGD("%s, flags %#x...\n", __FUNCTION__, flags);
     glpTracker = gmpAudioTracker.get();
-    Status = glpTracker->set(AUDIO_STREAM_MUSIC, 48000, AUDIO_FORMAT_PCM_16_BIT,
+    Status = glpTracker->set(stream, 48000, AUDIO_FORMAT_PCM_16_BIT,
             AUDIO_CHANNEL_OUT_STEREO, 0, (audio_output_flags_t)flags,
             AudioTrackCallback, url, 0, 0, false, (audio_session_t)0);
 
@@ -191,17 +191,16 @@ static int AudioTrackInit(int type,char *url) {
     return 0;
 }
 
-int new_android_audiotrack(char *in_name,int track_type)
+int new_android_audiotrack(char *in_name, int flag, int stream)
 {
     ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
     int ret = get_file_path(in_name);
     if (ret == 0) {
         ALOGI("OUTPUT media.dolbymix.sysfile PCM DATA");
-    }
-    else {
+    } else {
         ALOGI("OUTPUT ZERO DATA");
     }
-    return AudioTrackInit(track_type,in_name);
+    return AudioTrackInit(flag, in_name, (audio_stream_type_t)stream);
 }
 
 int release_android_audiotrack(void) {

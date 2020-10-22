@@ -2,7 +2,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := audiotrack-test
+LOCAL_MODULE := hippoaudio
 
 LOCAL_SHARED_LIBRARIES := libcutils libutils libtinyalsa libdl \
     libmedia libbinder libusbhost libstagefright
