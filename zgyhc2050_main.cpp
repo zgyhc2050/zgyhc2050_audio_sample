@@ -21,8 +21,8 @@
 #include <binder/IServiceManager.h>
 #include <cutils/log.h>
 #include <string.h>
-#include "android_out.h"
 #include <media/AudioTrack.h>
+#include "trackConfig.h"
 
 using namespace android;
 

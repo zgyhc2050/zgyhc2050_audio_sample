@@ -28,11 +28,11 @@
 #include <cutils/properties.h>
 #include <media/AudioTrack.h>
 
-#include "android_out.h"
+#include "trackConfig.h"
 
 using namespace android;
 
-#define LOG_TAG "audiotrack-test"
+#define LOG_TAG "zgyhc_trackConfig"
 //#define LOG_NDEBUG 0
 
 static AudioTrack *glpTracker = NULL;

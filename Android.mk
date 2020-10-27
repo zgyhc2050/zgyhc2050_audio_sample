@@ -14,8 +14,8 @@ LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/ \
 
 LOCAL_SRC_FILES := \
-    android_out.cpp \
-    amaudio_main.cpp \
+    trackConfig.cpp \
+    zgyhc2050_main.cpp \
 
 LOCAL_LDLIBS += -llog
 LOCAL_LDLIBS += -laudioclient
