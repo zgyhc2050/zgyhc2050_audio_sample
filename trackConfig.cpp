@@ -1,21 +1,3 @@
-/*
- * Copyright (C) 2010 Amlogic Corporation.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -29,6 +11,7 @@
 #include <media/AudioTrack.h>
 
 #include "trackConfig.h"
+#include "zgyhc_common.h"
 
 using namespace android;
 
@@ -37,10 +20,20 @@ using namespace android;
 
 static AudioTrack *glpTracker = NULL;
 static sp<AudioTrack> gmpAudioTracker;
-static pthread_mutex_t device_change_lock = PTHREAD_MUTEX_INITIALIZER;
+//static pthread_mutex_t device_change_lock = PTHREAD_MUTEX_INITIALIZER;
 char file_path[PROPERTY_VALUE_MAX] = {0};
 long file_length = 0;
 int fp_cur_pos = 0;
+
+
+void trackExitSignalHandler(int sig)
+{
+    if (sig == SIGINT)
+    {
+        ALOGD("[%s:%d] ", __func__, __LINE__);
+    }
+}
+
 
 static int get_file_path(void *path)
 {
@@ -67,7 +60,7 @@ static int get_file_path(void *path)
         return -1;
     }
 }
-
+/*
 static void read_data_from_test_file(void *destiny_buffer, int length,char *url)
 {
     //ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
@@ -104,9 +97,35 @@ static void read_data_from_test_file(void *destiny_buffer, int length,char *url)
 
     return ;
 }
+*/
 
+void *outputThread(void *arg)
+{
+    char *pFilePath = (char *)arg;
+    if (pFilePath == nullptr) {
+        ALOGE("[%s:%d] audio file path invalid", __func__, __LINE__);
+        return nullptr;
+    }
+    char *pBuffer = (char *)calloc(1, 3072);
 
+    while (1) {
+        int require = 3072;
+        int writtensize = 0;
+        loopReadFile(pFilePath, pBuffer, 3072);
+        do {
+            writtensize = glpTracker->write(pBuffer + (3072 - require), require, false);
+            if (writtensize > 0) {
+                require -= writtensize;
+                usleep(5000);
+            } else {
+//                ALOGE("[%s:%d] write data error:%d", __func__, __LINE__, writtensize);
+            }
+        } while (require > 0);
+    }
 
+}
+
+/*
 static void AudioTrackCallback(int event, void* user, void *info) {
 
     AudioTrack::Buffer *buffer = static_cast<AudioTrack::Buffer *>(info);
@@ -126,7 +145,7 @@ static void AudioTrackCallback(int event, void* user, void *info) {
 
     return ;
 }
-
+*/
 static int AudioTrackRelease(void) {
     if (glpTracker != NULL ) {
         glpTracker->pause();
@@ -141,7 +160,10 @@ static int AudioTrackRelease(void) {
 
     return 0;
 }
-static int AudioTrackInit(int type,char *url, audio_stream_type_t stream) {
+
+pthread_t writeThreadId;
+
+static int AudioTrackInit(int type, char *pFilePath, audio_stream_type_t stream) {
     status_t Status;
     int flags  = AUDIO_OUTPUT_FLAG_NONE;
     ALOGD("%s, entering...\n", __FUNCTION__);
@@ -159,10 +181,15 @@ static int AudioTrackInit(int type,char *url, audio_stream_type_t stream) {
 
     ALOGD("%s, flags %#x...\n", __FUNCTION__, flags);
     glpTracker = gmpAudioTracker.get();
+    #if 0
     Status = glpTracker->set(stream, 48000, AUDIO_FORMAT_PCM_16_BIT,
             AUDIO_CHANNEL_OUT_STEREO, 0, (audio_output_flags_t)flags,
             AudioTrackCallback, url, 0, 0, false, (audio_session_t)0);
-
+    #endif
+    Status = glpTracker->set(stream, 48000, AUDIO_FORMAT_PCM_16_BIT,
+            AUDIO_CHANNEL_OUT_STEREO, 8192, (audio_output_flags_t)flags,
+            nullptr, nullptr, 0, 0, false, (audio_session_t)0);
+//    glpTracker->setBufferSizeInFrames(8192);
     if (Status != NO_ERROR) {
         ALOGE("%s, AudioTrack set failed.\n", __FUNCTION__);
         if (gmpAudioTracker != NULL ) {
@@ -179,6 +206,7 @@ static int AudioTrackInit(int type,char *url, audio_stream_type_t stream) {
         return -1;
     }
 
+    pthread_create(&writeThreadId, nullptr, outputThread, pFilePath);
     glpTracker->start();
 
     Status = glpTracker->setVolume(1.0, 1.0);
@@ -191,16 +219,16 @@ static int AudioTrackInit(int type,char *url, audio_stream_type_t stream) {
     return 0;
 }
 
-int new_android_audiotrack(char *in_name, int flag, int stream)
+int new_android_audiotrack(char *pFilePath, int flag, audio_stream_type_t enStreamType)
 {
     ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
-    int ret = get_file_path(in_name);
+    int ret = get_file_path(pFilePath);
     if (ret == 0) {
         ALOGI("OUTPUT media.dolbymix.sysfile PCM DATA");
     } else {
         ALOGI("OUTPUT ZERO DATA");
     }
-    return AudioTrackInit(flag, in_name, (audio_stream_type_t)stream);
+    return AudioTrackInit(flag, pFilePath, enStreamType);
 }
 
 int release_android_audiotrack(void) {

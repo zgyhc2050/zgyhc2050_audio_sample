@@ -23,13 +23,18 @@
 #include <string.h>
 #include <media/AudioTrack.h>
 #include "trackConfig.h"
+#include "aaudioConfig.h"
+
+#define LOG_TAG "zgyhc_main"
+//#define LOG_NDEBUG 0
 
 using namespace android;
 
 int main(int argc, char** argv) {
-    char *in_file = NULL;
-    int  flag = 0;
-    int stream = -1;
+    char                *pFilePath = NULL;
+    int                 flag = 0;
+    audio_stream_type_t enStreamType = AUDIO_STREAM_MUSIC;
+    bool                bAaudio = false;
 
     if (argc == 1) {
         printf("[%s:%d] printf Too few parameters:%d, need 4\n", __func__, __LINE__, argc);
@@ -43,28 +48,29 @@ int main(int argc, char** argv) {
             printf("argv[3]: stream type:\n");
             return 0;
         } else {
-            flag = 0;
-            stream = AUDIO_STREAM_MUSIC;
             ALOGI("[%s:%d] No flag and stream type is specified, now set default pcm, MUSIC type.", __func__, __LINE__);
         }
     } else if (argc == 3) {
-        flag = atoi(argv[2]);
-        if (flag != 0 && flag != 1) {
-            ALOGW("[%s:%d] Invalid flag parameters:%d, now set default pcm type.", __func__, __LINE__, flag);
-            flag = 0;
+        if (!memcmp(argv[2], "aaudio", 4)) {
+            bAaudio = true;
+        } else {
+            flag = atoi(argv[2]);
+            if (flag != 0 && flag != 1) {
+                ALOGW("[%s:%d] Invalid flag parameters:%d, now set default pcm type.", __func__, __LINE__, flag);
+                flag = 0;
+            }
+            ALOGI("[%s:%d] No stream type specified, now set default MUSIC type.", __func__, __LINE__);
         }
-        ALOGI("[%s:%d] No stream type specified, now set default MUSIC type.", __func__, __LINE__);
-        stream = AUDIO_STREAM_MUSIC;
     } else if (argc == 4) {
         flag = atoi(argv[2]);
         if (flag != 0 && flag != 1) {
             ALOGW("[%s:%d] Invalid flag parameters:%d, now set default pcm type.", __func__, __LINE__, flag);
             flag = 0;
         }
-        stream = atoi(argv[3]);
-        if (stream <= AUDIO_STREAM_DEFAULT || stream > AUDIO_STREAM_PATCH) {
-            ALOGW("[%s:%d] Invalid stream type parameters:%d, now set default MUSIC type.", __func__, __LINE__, stream);
-            stream = AUDIO_STREAM_MUSIC;
+        enStreamType = (audio_stream_type_t)atoi(argv[3]);
+        if (enStreamType <= AUDIO_STREAM_DEFAULT || enStreamType > AUDIO_STREAM_PATCH) {
+            ALOGW("[%s:%d] Invalid stream type parameters:%d, now set default MUSIC type.", __func__, __LINE__, enStreamType);
+            enStreamType = AUDIO_STREAM_MUSIC;
         }
     } else {
         printf("[%s:%d] printf Too few parameters:%d, need 4\n", __func__, __LINE__, argc);
@@ -72,14 +78,16 @@ int main(int argc, char** argv) {
     }
 
     sp < ProcessState > proc(ProcessState::self());
-    ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
     sp < IServiceManager > sm = defaultServiceManager();
-    ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
-    in_file = argv[1];
-    new_android_audiotrack(in_file, flag, stream);
-    ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
+    pFilePath = argv[1];
+    if (bAaudio) {
+        printf("[%s:%d] AAudio case.\n", __func__, __LINE__);
+        ALOGI("[%s:%d] AAudio case.", __func__, __LINE__);
+        initAAudioConfig(pFilePath);
+    } else {
+        new_android_audiotrack(pFilePath, flag, enStreamType);
+    }
     ProcessState::self()->startThreadPool();
     IPCThreadState::self()->joinThreadPool();
-    ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
     return 0;
 }

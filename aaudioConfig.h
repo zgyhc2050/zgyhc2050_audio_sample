@@ -1,0 +1,6 @@
+
+
+
+
+int initAAudioConfig(char *pFilePath);
+

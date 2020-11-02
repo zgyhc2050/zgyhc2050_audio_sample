@@ -4,18 +4,29 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := hippoaudio
 
-LOCAL_SHARED_LIBRARIES := libcutils libutils libtinyalsa libdl \
-    libmedia libbinder libusbhost libstagefright
+LOCAL_SHARED_LIBRARIES := \
+    libaaudio \
+    libcutils \
+    libutils \
+    libtinyalsa \
+    libdl \
+    libmedia \
+    libbinder \
+    libusbhost \
+    libstagefright
 
 LOCAL_C_INCLUDES := \
     external/tinyalsa/include \
     frameworks/av/include/media/stagefright \
     frameworks/native/include/media/openmax \
+    frameworks/av/media/libaaudio/include \
     $(LOCAL_PATH)/ \
 
 LOCAL_SRC_FILES := \
-    trackConfig.cpp \
     zgyhc2050_main.cpp \
+    zgyhc_common.cpp \
+    trackConfig.cpp \
+    aaudioConfig.cpp \
 
 LOCAL_LDLIBS += -llog
 LOCAL_LDLIBS += -laudioclient
