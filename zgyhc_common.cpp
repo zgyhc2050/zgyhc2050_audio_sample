@@ -13,7 +13,7 @@
 
 void loopReadFile(char *pFilePath, void *pBuffer, unsigned int u32Size)
 {
-static unsigned int u32CurPosition = 0;
+    static unsigned int u32CurPosition = 44;
 //    if (aml_getprop_bool("media.audiohal.file")) {
          int s32Ret = 0;
          size_t u32ReadSize = 0;
@@ -28,7 +28,7 @@ static unsigned int u32CurPosition = 0;
          u32ReadSize = fread(pBuffer, 1, u32Size, pFile);
          if (u32ReadSize != u32Size) {
              ALOGI("restart read file");
-             u32CurPosition = 0;
+             u32CurPosition = 44;
              fseek(pFile, 0, SEEK_SET);
              u32ReadSize = fread((char *)pBuffer+u32ReadSize, 1, u32Size-u32ReadSize, pFile);
           }

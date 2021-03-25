@@ -15,7 +15,6 @@
 
 #include <cutils/properties.h>
 #include "aaudioConfig.h"
-#include "zgyhc_common.h"
 
 
 #define MAX_FILE_PATH_BYTE  (1024)
@@ -103,53 +102,45 @@ aaudio_data_callback_result_t aaudioDataCallBack(
     aaudio_format_t format = AAudioStream_getFormat(stream);
     char *pPath  = (char *)userData;
 
-
-    void *ps32SpdifTempBuffer = NULL;
-    ps32SpdifTempBuffer = realloc(ps32SpdifTempBuffer, numSamples * sizeof(int16_t));
-    //ALOGI("format:%#x, numSamples:%d", format, numSamples);
-    loopReadFile(pPath, ps32SpdifTempBuffer, numSamples * sizeof(int16_t));
+    void *pTempBuffer = NULL;
+    pTempBuffer = realloc(pTempBuffer, numSamples * sizeof(int16_t));
+    loopReadFile(pPath, pTempBuffer, numSamples * sizeof(int16_t));
     if (format == AAUDIO_FORMAT_PCM_I16) {
-//        ALOGI("hippo AAUDIO_FORMAT_PCM_I16, numFrames:%d", numFrames);
-        //apply_volume_16to32(1, (int16_t *)ps32SpdifTempBuffer, (int32_t *)audioData, numSamples * sizeof(int16_t));
-        memcpy(audioData, ps32SpdifTempBuffer, numSamples * sizeof(int16_t));
+        memcpy(audioData, pTempBuffer, numSamples * sizeof(int16_t));
     } else if (format == AAUDIO_FORMAT_PCM_FLOAT) {
         int32_t * ps32AudioData = (int32_t *)audioData;
-        int16_t * ps32TempBuf = (int16_t *)ps32SpdifTempBuffer;
+        int16_t * ps32TempBuf = (int16_t *)pTempBuffer;
         for (int i = 0; i < numSamples; i++) {
             ps32AudioData[2 * i]      = ps32TempBuf[2 * i] << 16;
             ps32AudioData[2 * i + 1]  = ps32TempBuf[2 * i + 1] << 16;
         }
     }
 
-    free(ps32SpdifTempBuffer);
+    free(pTempBuffer);
     return AAUDIO_CALLBACK_RESULT_CONTINUE;
 }
 
 
-int initAAudioConfig(char *pFilePath)
+int initAAudioConfig(zgyhc_audio_info_st *stCfg)
 {
-    if (pFilePath == nullptr) {
+    if (stCfg->pFilePath == nullptr) {
         ALOGE("[%s:%d] pFilePath is null", __func__, __LINE__);
         return -1;
     }
 
     aaudio_result_t enRet = AAUDIO_OK;
-
-    int patchLenth = strlen(pFilePath);
+    int patchLenth = strlen(stCfg->pFilePath);
     if (patchLenth >= MAX_FILE_PATH_BYTE || patchLenth <= 0) {
         ALOGE("[%s:%d] The leng:%d of the wrong", __func__, __LINE__, patchLenth);
         return -1;
     }
-    strncpy(g_astrFilePath, pFilePath, patchLenth);
-    ALOGD("[%s:%d] file path:%s", __func__, __LINE__, g_astrFilePath);
-
+    strncpy(g_astrFilePath, stCfg->pFilePath, patchLenth);
     // Use an AAudioStreamBuilder to contain requested parameters.
     enRet = AAudio_createStreamBuilder(&aaudioBuilder);
-    ALOGI("[%s:%d] enRet:%#x", __func__, __LINE__, enRet);
 
     // Request stream properties.
-    AAudioStreamBuilder_setSampleRate(aaudioBuilder, 48000);
-    AAudioStreamBuilder_setChannelCount(aaudioBuilder, 2);
+    AAudioStreamBuilder_setSampleRate(aaudioBuilder, stCfg->sampleRate);
+    AAudioStreamBuilder_setChannelCount(aaudioBuilder, stCfg->channelNum);
     AAudioStreamBuilder_setDataCallback(aaudioBuilder, aaudioDataCallBack, &g_astrFilePath);
     AAudioStreamBuilder_setPerformanceMode(aaudioBuilder, AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
     AAudioStreamBuilder_setFormat(aaudioBuilder, AAUDIO_FORMAT_PCM_I16);
@@ -158,7 +149,6 @@ int initAAudioConfig(char *pFilePath)
 
     // Create an AAudioStream using the Builder.
     enRet = AAudioStreamBuilder_openStream(aaudioBuilder, &aaudioStream1);
-    ALOGI("[%s:%d] enRet:%#x", __func__, __LINE__, enRet);
     enRet = AAudioStream_requestStart(aaudioStream1);
     ALOGI("[%s:%d] enRet:%#x", __func__, __LINE__, enRet);
 

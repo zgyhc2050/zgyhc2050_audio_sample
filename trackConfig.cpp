@@ -11,7 +11,6 @@
 #include <media/AudioTrack.h>
 
 #include "trackConfig.h"
-#include "zgyhc_common.h"
 
 using namespace android;
 
@@ -25,42 +24,23 @@ char file_path[PROPERTY_VALUE_MAX] = {0};
 long file_length = 0;
 int fp_cur_pos = 0;
 
-
-void trackExitSignalHandler(int sig)
-{
-    if (sig == SIGINT)
-    {
-        ALOGD("[%s:%d] ", __func__, __LINE__);
-    }
-}
-
-
+#if 0
 static int get_file_path(void *path)
 {
-    //char system_file_path[PROPERTY_VALUE_MAX];
-
-    //int ret =property_get(FilePath, (char *)path, NULL);
-    if (1)
-    {
-        ALOGI("<%s::%d>--[path:%s]", __FUNCTION__, __LINE__, path);
-        FILE *fp = fopen((const char *)path, "r");
-        if(fp) {
-            fseek(fp,0,SEEK_SET);
-            fseek(fp,0,SEEK_END);
-            file_length = ftell(fp);
-            fseek(fp,0,SEEK_SET);
-            fclose(fp);
-        }
-        fp = NULL;
-
-        return 0;
+    ALOGI("[%s:%d] path:%s", __func__, __LINE__, path);
+    FILE *fp = fopen((const char *)path, "r");
+    if(fp) {
+        fseek(fp,0,SEEK_SET);
+        fseek(fp,0,SEEK_END);
+        file_length = ftell(fp);
+        fseek(fp,0,SEEK_SET);
+        fclose(fp);
     }
-    else{
-        ALOGI("<%s::%d>--[property_get return 0]", __FUNCTION__, __LINE__);
-        return -1;
-    }
+    fp = NULL;
+    return 0;
 }
-/*
+
+
 static void read_data_from_test_file(void *destiny_buffer, int length,char *url)
 {
     //ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
@@ -97,7 +77,30 @@ static void read_data_from_test_file(void *destiny_buffer, int length,char *url)
 
     return ;
 }
+
+/*
+static void AudioTrackCallback(int event, void* user, void *info) {
+
+    AudioTrack::Buffer *buffer = static_cast<AudioTrack::Buffer *>(info);
+    char *file_name = (char *)user;
+    if (event != AudioTrack::EVENT_MORE_DATA) {
+        ALOGD("%s, audio track envent = %d!\n", __FUNCTION__, event);
+        return;
+    }
+    if (buffer == NULL || buffer->size == 0) {
+        return;
+    }
+    pthread_mutex_lock(&device_change_lock);
+    //ALOGI("<%s::%d>--[raw:0x%x]--[size:%d]", __FUNCTION__, __LINE__, buffer->raw, buffer->size);
+    //memset((void *)buffer->raw, 0, buffer->size);
+    read_data_from_test_file((void *)buffer->raw, buffer->size,file_name);
+    pthread_mutex_unlock(&device_change_lock);
+
+    return ;
+}
 */
+
+#endif
 
 void *outputThread(void *arg)
 {
@@ -125,28 +128,7 @@ void *outputThread(void *arg)
 
 }
 
-/*
-static void AudioTrackCallback(int event, void* user, void *info) {
-
-    AudioTrack::Buffer *buffer = static_cast<AudioTrack::Buffer *>(info);
-    char *file_name = (char *)user;
-    if (event != AudioTrack::EVENT_MORE_DATA) {
-        ALOGD("%s, audio track envent = %d!\n", __FUNCTION__, event);
-        return;
-    }
-    if (buffer == NULL || buffer->size == 0) {
-        return;
-    }
-    pthread_mutex_lock(&device_change_lock);
-    //ALOGI("<%s::%d>--[raw:0x%x]--[size:%d]", __FUNCTION__, __LINE__, buffer->raw, buffer->size);
-    //memset((void *)buffer->raw, 0, buffer->size);
-    read_data_from_test_file((void *)buffer->raw, buffer->size,file_name);
-    pthread_mutex_unlock(&device_change_lock);
-
-    return ;
-}
-*/
-static int AudioTrackRelease(void) {
+int deinitAudioTrackConfig(void) {
     if (glpTracker != NULL ) {
         glpTracker->pause();
         glpTracker->flush();
@@ -163,75 +145,49 @@ static int AudioTrackRelease(void) {
 
 pthread_t writeThreadId;
 
-static int AudioTrackInit(int type, char *pFilePath, audio_stream_type_t stream) {
+int initAudioTrackConfig(zgyhc_audio_info_st *stCfg) {
     status_t Status;
-    int flags  = AUDIO_OUTPUT_FLAG_NONE;
-    ALOGD("%s, entering...\n", __FUNCTION__);
+    ALOGD("[%s:%d] enter...", __func__, __LINE__);
     gmpAudioTracker = new AudioTrack();
     if (gmpAudioTracker == NULL) {
-        ALOGE("%s, new AudioTrack failed.\n", __FUNCTION__);
+        ALOGE("[%s:%d] new AudioTrack failed", __func__, __LINE__);
         return -1;
     }
-    if (type == 1)
-        flags = AUDIO_OUTPUT_FLAG_HW_AV_SYNC;
-    else if (type == 2)
-        flags = AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_RAW;
-    else if (type == 3)
-        flags = AUDIO_OUTPUT_FLAG_DEEP_BUFFER;
-
-    ALOGD("%s, flags %#x...\n", __FUNCTION__, flags);
     glpTracker = gmpAudioTracker.get();
     #if 0
     Status = glpTracker->set(stream, 48000, AUDIO_FORMAT_PCM_16_BIT,
             AUDIO_CHANNEL_OUT_STEREO, 0, (audio_output_flags_t)flags,
             AudioTrackCallback, url, 0, 0, false, (audio_session_t)0);
     #endif
-    Status = glpTracker->set(stream, 48000, AUDIO_FORMAT_PCM_16_BIT,
-            AUDIO_CHANNEL_OUT_STEREO, 8192, (audio_output_flags_t)flags,
+    Status = glpTracker->set(stCfg->enStreamType, stCfg->sampleRate, AUDIO_FORMAT_PCM_16_BIT,
+            stCfg->channelMask, 8192, stCfg->enFlags,
             nullptr, nullptr, 0, 0, false, (audio_session_t)0);
 //    glpTracker->setBufferSizeInFrames(8192);
     if (Status != NO_ERROR) {
-        ALOGE("%s, AudioTrack set failed.\n", __FUNCTION__);
+        ALOGE("[%s:%d] AudioTrack set failed, Status:%d", __func__, __LINE__, Status);
         if (gmpAudioTracker != NULL ) {
             gmpAudioTracker.clear();
             glpTracker = NULL;
         }
         return -1;
     }
-    ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
     Status = glpTracker->initCheck();
     if (Status != NO_ERROR) {
-        ALOGE("%s, AudioTrack initCheck failed.\n", __FUNCTION__);
-        AudioTrackRelease();
+        ALOGE("[%s:%d] AudioTrack initCheck failed, Status:%d", __func__, __LINE__, Status);
+        deinitAudioTrackConfig();
         return -1;
     }
 
-    pthread_create(&writeThreadId, nullptr, outputThread, pFilePath);
+    pthread_create(&writeThreadId, nullptr, outputThread, stCfg->pFilePath);
     glpTracker->start();
 
     Status = glpTracker->setVolume(1.0, 1.0);
     if (Status != NO_ERROR) {
-        ALOGE("%s, AudioTrack setVolume failed.\n", __FUNCTION__);
-        AudioTrackRelease();
+        ALOGE("[%s:%d] AudioTrack setVolume failed, Status:%d", __func__, __LINE__, Status);
+        deinitAudioTrackConfig();
         return -1;
     }
-    ALOGD("%s, exit...\n", __FUNCTION__);
     return 0;
 }
 
-int new_android_audiotrack(char *pFilePath, int flag, audio_stream_type_t enStreamType)
-{
-    ALOGI("<%s::%d>", __FUNCTION__, __LINE__);
-    int ret = get_file_path(pFilePath);
-    if (ret == 0) {
-        ALOGI("OUTPUT media.dolbymix.sysfile PCM DATA");
-    } else {
-        ALOGI("OUTPUT ZERO DATA");
-    }
-    return AudioTrackInit(flag, pFilePath, enStreamType);
-}
-
-int release_android_audiotrack(void) {
-    return AudioTrackRelease();
-}
 

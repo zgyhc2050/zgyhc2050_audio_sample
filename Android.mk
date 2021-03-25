@@ -20,6 +20,7 @@ LOCAL_C_INCLUDES := \
     frameworks/av/include/media/stagefright \
     frameworks/native/include/media/openmax \
     frameworks/av/media/libaaudio/include \
+    frameworks/av/media/libmediametrics/include \
     $(LOCAL_PATH)/ \
 
 LOCAL_SRC_FILES := \
