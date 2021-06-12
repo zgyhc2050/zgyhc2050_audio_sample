@@ -22,6 +22,7 @@
 #include <cutils/log.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <media/AudioTrack.h>
 #include "trackConfig.h"
 #include "aaudioConfig.h"
@@ -33,14 +34,17 @@ using namespace android;
 
 static void usage(const char* pname)
 {
-    fprintf(stderr,
-            "usage: %s [-p file-path] [-t stream-type] [-c channel-number] [-f flags] [-m]\n"
-            "   -p: the file path.\n"
-            "   -t: the stream type.\n"
-            "   -c: the channel number.\n"
-            "   -f: the flags.\n"
-            "   -m: the AAudio enable.(Not need the param)\n",
-            pname);
+    fprintf(stderr, "Usage: %s [-p file-path] [-t stream-type] [-c channel-number] [-f flags] [-m]\n", pname);
+    fprintf(stderr, R"init(
+General options:
+  -p, --file_path=<path>            Set the file path.
+  -t, --stream_type=<type>          Set the stream type.
+  -c, --channel_num=<number>        Set the channel number.
+  -f, --stream_flags=<flags>        Set the flags.
+  -r, --sample_rate=<rate>          Set the sample rate.
+  -m, --mmap_audio=<aaudio>         Set the AAudio enable. (Dispensable param, default true. 1:true 0:false)
+  -H, --help_param=<param>          Query help infomation for each param. (The parameter character above. eg: -H t.)
+)init");
 }
 
 static void helpInfo(const char* param)
@@ -112,6 +116,20 @@ static void helpInfo(const char* param)
     return;
 }
 
+static struct option long_options[] = {
+    {"file_path",              required_argument,  NULL, 'p'},
+    {"stream_type",            required_argument,  NULL, 't'},
+    {"channel_num",            required_argument,  NULL, 'c'},
+    {"stream_flags",           required_argument,  NULL, 'f'},
+    {"sample_rate",            required_argument,  NULL, 'r'},
+    {"mmap_audio",             optional_argument,  NULL, 'm'},
+//        {"settings",               no_argument,        NULL, 's'},
+    {"stream_volume",          required_argument,  NULL, 'v'},
+    {"help_param",             required_argument,  NULL, 'H'},
+//        {"http-user", required_argument, &lopt, 2 },
+    {"help",                   no_argument,        NULL, 'h'},
+    {0, 0, 0, 0 }
+};
 
 int main(int argc, char** argv) {
     zgyhc_audio_info_st     stAudioInfo = {
@@ -119,13 +137,14 @@ int main(int argc, char** argv) {
         .enFlags = AUDIO_OUTPUT_FLAG_NONE,
         .enStreamType = AUDIO_STREAM_MUSIC,
         .channelNum = 2,
-        .channelMask = AUDIO_STREAM_MUSIC,
+        .channelMask = AUDIO_CHANNEL_OUT_STEREO,
         .sampleRate = 48000,
         .bAaudio = false,
     };
 
+//    bool bSettings = false;
     int opt;
-    while ((opt = getopt(argc, argv, "p:t:c:f:s:mhH:")) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:t:c:f:s:m::hH:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 stAudioInfo.pFilePath = optarg;
@@ -139,11 +158,15 @@ int main(int argc, char** argv) {
             case 'f':
                 stAudioInfo.enFlags = (audio_output_flags_t)atoi(optarg);
                 break;
-            case 's':
+            case 'r':
                 stAudioInfo.sampleRate = atoi(optarg);
                 break;
             case 'm':
-                stAudioInfo.bAaudio = true;
+                if (optarg) {
+                    stAudioInfo.bAaudio = (atoi(optarg) == 0) ? false : true;
+                } else {
+                    stAudioInfo.bAaudio = true;
+                }
                 break;
             case 'H':
                 helpInfo(optarg);
@@ -175,11 +198,15 @@ int main(int argc, char** argv) {
         ALOGW("[%s:%d] Invalid flags:%d, now set default flag type NONE.", __func__, __LINE__, stAudioInfo.enFlags);
         stAudioInfo.enFlags = AUDIO_OUTPUT_FLAG_NONE;
     }
+
     printf("[%s:%d] input pFilePath:%s, enStreamType:%d, channel_num:%d, flag:%#x, aaudio:%d\n", __func__, __LINE__,
         stAudioInfo.pFilePath, stAudioInfo.enStreamType, stAudioInfo.channelNum, stAudioInfo.enFlags, stAudioInfo.bAaudio);
     ALOGI("[%s:%d] pFilePath:%s, enStreamType:%d, channel_num:%d, flag:%#x, aaudio:%d", __func__, __LINE__,
         stAudioInfo.pFilePath, stAudioInfo.enStreamType, stAudioInfo.channelNum, stAudioInfo.enFlags, stAudioInfo.bAaudio);
-
+    if (stAudioInfo.pFilePath == NULL) {
+        printf("[%s:%d] file is null.\n", __func__, __LINE__);
+        return 0;
+    }
     sp < ProcessState > proc(ProcessState::self());
     sp < IServiceManager > sm = defaultServiceManager();
     if (stAudioInfo.bAaudio) {
