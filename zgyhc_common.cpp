@@ -2,6 +2,7 @@
 
 #define LOG_TAG "zgyhc_common"
 #include <errno.h>
+#include <system/audio.h>
 
 #include "zgyhc_common.h"
 #include <cutils/log.h>

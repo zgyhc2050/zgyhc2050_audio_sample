@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#include <system/audio.h>
 #include <android-base/macros.h>
 #include <aaudio/AAudio.h>
 #include <csignal>
