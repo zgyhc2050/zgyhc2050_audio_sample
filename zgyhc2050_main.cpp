@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
 
 //    bool bSettings = false;
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:t:c:f:s:m::hH:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:t:c:f:r:m::hH:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'p':
                 stAudioInfo.pFilePath = optarg;
@@ -192,11 +192,6 @@ int main(int argc, char** argv) {
         ALOGW("[%s:%d] Invalid channel:%d, now set default 2 Channel.", __func__, __LINE__, stAudioInfo.channelNum);
         stAudioInfo.channelNum = 2;
         stAudioInfo.channelMask = AUDIO_CHANNEL_OUT_STEREO;
-    }
-
-    if (stAudioInfo.enFlags & 0x1ffff) {
-        ALOGW("[%s:%d] Invalid flags:%d, now set default flag type NONE.", __func__, __LINE__, stAudioInfo.enFlags);
-        stAudioInfo.enFlags = AUDIO_OUTPUT_FLAG_NONE;
     }
 
     printf("[%s:%d] input pFilePath:%s, enStreamType:%d, channel_num:%d, flag:%#x, aaudio:%d\n", __func__, __LINE__,
